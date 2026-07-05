@@ -566,7 +566,7 @@ async function loadAdminMetrics() {
 
 async function loadMotoristasForAdmin() {
   const [profilesResult, ordersResult] = await Promise.all([
-    supabase.from('profiles').select('id,full_name,email,role,assigned_commerce,assigned_commerce_id,active_order').or('role.eq.motorizado,role.is.null'),
+    supabase.from('profiles').select('id,full_name,email,role,assigned_commerce,assigned_commerce_id,active_order'),
     supabase.from('orders').select('assigned_to_id,status').in('status', ['assigned', 'on_way'])
   ]);
   if (profilesResult.error) return console.error(profilesResult.error);
