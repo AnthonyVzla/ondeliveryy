@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>On Delivery</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icon-192.png" sizes="192x192" type="image/png">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <link rel="stylesheet" href="styles.css">
+  <meta name="theme-color" content="#000000">
+</head>
+<body>
+  <div id="app">
+    <header class="topbar">
+      <div class="brand">
+        <img src="icon-192.png" alt="On Delivery" class="brand-logo">
+        <span>ON</span> DELIVERY
+      </div>
+      <div class="header-actions">
+        <button id="btn-install" class="btn small">Instalar app</button>
+        <button id="btn-test-sound" class="btn small secondary">Probar sonido</button>
+        <button id="btn-sound-toggle" class="btn small">🔔 Sonido</button>
+        <button id="btn-enable-notifications" class="btn small secondary">Activar notificaciones</button>
+        <button id="btn-logout" class="btn small secondary hidden">Cerrar sesión</button>
+      </div>
+      <p id="install-hint" class="small hidden">Si no puedes instalar desde el botón, usa el menú del navegador y selecciona "Agregar a la pantalla principal" o "Instalar".</p>
+    </header>
+
+    <main>
+      <section id="auth-section" class="card auth-card">
+        <h1>Bienvenido a On Delivery</h1>
+        <p>Inicia sesión o regístrate para gestionar pedidos y tus rutas.</p>
+        <form id="auth-form">
+          <div class="field"><label for="email">Correo electrónico</label><input id="email" type="email" autocomplete="username" required></div>
+          <div class="field"><label for="password">Contraseña</label><input id="password" type="password" autocomplete="current-password" required></div>
+          <div class="field hidden" id="full-name-field"><label for="full-name">Nombre completo</label><input id="full-name" type="text" autocomplete="name"></div>
+          <button id="btn-auth-action" class="btn primary">Iniciar sesión</button>
+          <p class="small">¿No tienes cuenta? <button id="toggle-auth-mode" type="button" class="link-button">Regístrate</button></p>
+        </form>
+      </section>
+
+      <section id="status-section" class="card hidden">
+        <h2 id="status-title">Estado</h2>
+        <p id="status-message"></p>
+      </section>
+
+      <section id="no-role-section" class="card hidden">
+        <h2>Cuenta registrada</h2>
+        <p>Tu cuenta está activa, pero aún no tienes rol asignado. Espera a que el administrador te asigne <strong>aliado</strong>, <strong>motorizado</strong> o <strong>admin</strong>.</p>
+      </section>
+
+      <section id="aliado-view" class="card hidden">
+        <div class="section-header">
+          <h2>Aliado</h2>
+          <span id="aliado-role-label"></span>
+          <div class="export-controls">
+            <label for="aliado-order-filter" class="small">Exportar:</label>
+            <select id="aliado-order-filter">
+              <option value="all">Todos</option>
+              <option value="day">Día</option>
+              <option value="week">Semana</option>
+              <option value="month">Mes</option>
+              <option value="range">Rango</option>
+            </select>
+            <input id="aliado-start-date" type="date" class="hidden">
+            <input id="aliado-end-date" type="date" class="hidden">
+            <button id="btn-export-aliado" class="btn secondary small">Exportar pedidos .xls</button>
+          </div>
+        </div>
+        <div class="tab-row" id="aliado-tabs">
+          <button class="tab-btn active" data-target="aliado-pending">Pedidos pendientes</button>
+          <button class="tab-btn" data-target="aliado-onway">Pedidos en camino</button>
+          <button class="tab-btn" data-target="aliado-delivered">Pedidos entregados</button>
+          <button class="tab-btn" data-target="aliado-request">Pedir delivery</button>
+          <button class="tab-btn" data-target="aliado-cost">Costo de delivery</button>
+        </div>
+
+        <div class="tab-panel" id="aliado-pending-panel">
+          <h3>Pedidos pendientes</h3>
+          <div id="aliado-pending-list" class="list-box"></div>
+        </div>
+        <div class="tab-panel hidden" id="aliado-onway-panel">
+          <h3>Pedidos en camino</h3>
+          <div id="aliado-onway-list" class="list-box"></div>
+        </div>
+        <div class="tab-panel hidden" id="aliado-delivered-panel">
+          <h3>Pedidos entregados</h3>
+          <div id="aliado-delivered-list" class="list-box"></div>
+        </div>
+        <div class="tab-panel hidden" id="aliado-request-panel">
+          <h3>Pedir delivery</h3>
+          <form id="delivery-form" class="order-form">
+            <div class="field"><label for="recipient-name">Nombre de quien recibe</label><input id="recipient-name" type="text" required></div>
+            <div class="field"><label for="recipient-phone">Teléfono</label><input id="recipient-phone" type="tel" required></div>
+            <div class="field"><label for="delivery-address">Dirección escrita</label><input id="delivery-address" type="text" required></div>
+            <div class="field"><label for="delivery-url">Dirección URL (Google Maps)</label><input id="delivery-url" type="url" placeholder="https://maps.app.goo.gl/..." required></div>
+            <div class="field price-grid">
+              <label>Precio del delivery</label>
+              <div class="price-options" id="price-options"></div>
+            </div>
+            <div class="field"><label for="custom-price">Precio manual</label><input id="custom-price" type="number" step="0.1" min="0" placeholder="Ej. 13.5"></div>
+            <div class="field radio-row">
+              <label><input type="radio" name="delivery-speed" value="normal" checked> Entrega normal</label>
+              <label><input type="radio" name="delivery-speed" value="urgent"> Urgente</label>
+            </div>
+            <div class="field"><label for="delivery-description">Descripción del pedido</label><textarea id="delivery-description" rows="3" required></textarea></div>
+            <button id="btn-send-delivery" class="btn primary">Enviar solicitud</button>
+          </form>
+        </div>
+        <div class="tab-panel hidden" id="aliado-cost-panel">
+          <h3>Pedir costo de delivery</h3>
+          <p>Presiona el siguiente botón para solicitar el costo por WhatsApp.</p>
+          <a id="whatsapp-support" class="btn primary" target="_blank" rel="noopener" href="https://wa.me/584128481584?text=Hola%20soporte%20On%20Delivery,%20quiero%20consultar%20el%20costo%20de%20delivery">Contactar soporte</a>
+        </div>
+      </section>
+
+      <section id="motorizado-view" class="card hidden">
+        <div class="section-header"><h2>Motorizado</h2><div class="status-chip"><span id="motor-status-text">Estado</span><button id="btn-toggle-status" class="btn small secondary">On/Off</button></div></div>
+        <div class="note">Si tienes un servicio activo, el estado se pone <strong>OFF</strong> hasta entregar.</div>
+        <div class="card small-card">
+          <h3>Pedidos disponibles</h3>
+          <div id="available-orders-list" class="list-box"></div>
+        </div>
+        <div class="tab-row" id="motor-tabs">
+          <button class="tab-btn active" data-target="motor-pending">Pedidos pendientes</button>
+          <button class="tab-btn" data-target="motor-delivered">Pedidos entregados</button>
+          <button class="tab-btn" data-target="motor-canceled">Pedidos cancelados</button>
+          <button class="tab-btn" data-target="motor-history">Historial</button>
+        </div>
+        <div class="tab-panel" id="motor-pending-panel">
+          <h3>Pedidos pendientes</h3>
+          <div id="motor-pending-list" class="list-box"></div>
+        </div>
+        <div class="tab-panel hidden" id="motor-delivered-panel">
+          <h3>Pedidos entregados</h3>
+          <div id="motor-delivered-list" class="list-box"></div>
+        </div>
+        <div class="tab-panel hidden" id="motor-canceled-panel">
+          <h3>Pedidos cancelados</h3>
+          <div id="motor-canceled-list" class="list-box"></div>
+        </div>
+        <div class="tab-panel hidden" id="motor-history-panel">
+          <h3>Historial</h3>
+          <div class="filter-row">
+            <label>Filtrar por:</label>
+            <select id="motor-history-filter"><option value="day">Día</option><option value="week">Semana</option><option value="month">Mes</option><option value="range">Rango</option></select>
+            <input id="motor-start-date" type="date" class="hidden">
+            <input id="motor-end-date" type="date" class="hidden">
+            <button id="btn-motor-filter" class="btn secondary">Aplicar</button>
+          </div>
+          <div id="motor-history-list" class="list-box"></div>
+          <div class="earnings-box">
+            <p>Ganancia estimada 60%: <strong id="motor-earnings">$0.00</strong></p>
+            <button id="btn-reset-earnings" class="btn secondary small">Reiniciar ganancia</button>
+          </div>
+        </div>
+      </section>
+
+      <section id="admin-view" class="card hidden">
+        <div class="section-header"><h2>Administrador</h2></div>
+        <div class="stats-grid">
+          <div class="stat-card"><span class="stat-value" id="admin-total-orders">0</span><span class="stat-label">Pedidos totales</span></div>
+          <div class="stat-card"><span class="stat-value" id="admin-active-orders">0</span><span class="stat-label">Pedidos activos</span></div>
+          <div class="stat-card"><span class="stat-value" id="admin-delivered-count">0</span><span class="stat-label">Entregados</span></div>
+          <div class="stat-card"><span class="stat-value" id="admin-earnings">$0.00</span><span class="stat-label">Total generado</span></div>
+        </div>
+        <div class="card small-card">
+          <h3>Resumen de rendimiento</h3>
+          <div id="admin-metrics-summary" class="metrics-list"></div>
+        </div>
+        <div class="card small-card">
+          <h3>Estado de motorizados</h3>
+          <div id="admin-motorist-status" class="metrics-list"></div>
+        </div>
+        <div class="card small-card">
+          <h3>Motorizados activos</h3>
+          <div id="admin-active-motorists" class="list-box"></div>
+        </div>
+        <div class="card small-card">
+          <h3>Asignar motorizado a comercio</h3>
+          <div class="field"><label for="admin-motorista-select">Motorizado</label><select id="admin-motorista-select"><option value="">No hay motorizados registrados</option></select></div>
+          <div class="field"><label for="admin-commerce-select">Nombre del local</label><select id="admin-commerce-select"><option value="">Selecciona un aliado</option></select></div>
+          <button id="btn-assign-commerce" class="btn primary">Asignar comercio</button>
+        </div>
+        <div class="card small-card">
+          <div class="section-header"><h3>Historial de pedidos</h3><button id="btn-export-admin" class="btn secondary small">Exportar pedidos .xls</button></div>
+          <div class="filter-row">
+            <label>Filtrar por:</label>
+            <select id="admin-order-filter"><option value="day">Día</option><option value="week">Semana</option><option value="month">Mes</option><option value="range">Rango</option></select>
+            <input id="admin-start-date" type="date" class="hidden">
+            <input id="admin-end-date" type="date" class="hidden">
+            <label for="admin-filter-user">Aliado / Motorizado</label>
+            <input id="admin-filter-user" type="text" placeholder="Correo o nombre"></input>
+            <button id="btn-admin-filter" class="btn secondary">Aplicar</button>
+          </div>
+          <div id="admin-orders-list" class="list-box"></div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <input id="photo-capture-input" type="file" accept="image/*" capture="environment" class="hidden">
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>
