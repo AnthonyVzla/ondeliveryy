@@ -150,6 +150,9 @@ const elements = {
   adminMotoristaSelect: document.getElementById('admin-motorista-select'),
   adminCommerceSelect: document.getElementById('admin-commerce-select'),
   adminMetricsSummary: document.getElementById('admin-metrics-summary'),
+  adminUserSelect: document.getElementById('admin-user-select'),
+  adminRoleSelect: document.getElementById('admin-role-select'),
+  btnUpdateRole: document.getElementById('btn-update-role'),
   adminMotoristStatus: document.getElementById('admin-motorist-status'),
   adminActiveMotorists: document.getElementById('admin-active-motorists'),
   btnAssignCommerce: document.getElementById('btn-assign-commerce'),
@@ -326,6 +329,7 @@ async function refreshAdminView() {
     loadAdminMetrics(),
     loadMotoristasForAdmin(),
     loadAliadosForAdmin(),
+    loadAdminUsers(),
     loadAdminOrders(),
   ]);
 }
@@ -562,17 +566,18 @@ async function loadAdminMetrics() {
 
 async function loadMotoristasForAdmin() {
   const [profilesResult, ordersResult] = await Promise.all([
-    supabase.from('profiles').select('id,full_name,email,role,assigned_commerce,assigned_commerce_id,active_order'),
+    supabase.from('profiles').select('id,full_name,email,role,assigned_commerce,assigned_commerce_id,active_order').or('role.eq.motorizado,role.is.null'),
     supabase.from('orders').select('assigned_to_id,status').in('status', ['assigned', 'on_way'])
   ]);
   if (profilesResult.error) return console.error(profilesResult.error);
   if (ordersResult.error) return console.error(ordersResult.error);
-  const motoristas = (profilesResult.data || []).filter(user => user.role === 'motorizado');
+  const motoristas = (profilesResult.data || []).filter(user => user.role === 'motorizado' || !user.role);
   const busyMotoristIds = new Set((ordersResult.data || []).filter(order => order.assigned_to_id).map(order => order.assigned_to_id));
   elements.adminMotoristaSelect.innerHTML = motoristas.length
     ? motoristas.map(user => {
         const commerceLabel = user.assigned_commerce || (user.assigned_commerce_id ? 'Comercio asignado' : 'Sin comercio');
-        return `<option value="${user.id}">${user.full_name || user.email}${commerceLabel ? ' — ' + commerceLabel : ''}</option>`;
+        const roleLabel = user.role === 'motorizado' ? 'Motorizado' : 'Sin rol';
+        return `<option value="${user.id}">${user.full_name || user.email} (${roleLabel})${commerceLabel ? ' — ' + commerceLabel : ''}</option>`;
       }).join('')
     : '<option value="">No hay motorizados registrados</option>';
   elements.adminMotoristaSelect.disabled = !motoristas.length;
@@ -611,6 +616,24 @@ async function loadAliadosForAdmin() {
       }).join('')
     : '<option value="">No hay aliados registrados</option>';
   elements.adminCommerceSelect.disabled = !aliados.length;
+}
+
+async function loadAdminUsers() {
+  const { data, error } = await supabase.from('profiles').select('id,full_name,email,role');
+  if (error) return console.error(error);
+  elements.adminUserSelect.innerHTML = (data || []).length
+    ? (data || []).map(user => `<option value="${user.id}">${user.full_name || user.email} (${user.role || 'sin rol'})</option>`).join('')
+    : '<option value="">No hay usuarios registrados</option>';
+}
+
+async function updateUserRole() {
+  const userId = elements.adminUserSelect.value;
+  const role = elements.adminRoleSelect.value;
+  if (!userId || !role) return setStatus('Selecciona un usuario y un rol.', 'Error', false);
+  const { error } = await supabase.from('profiles').update({ role }).eq('id', userId);
+  if (error) return setStatus('No se pudo actualizar el rol.', 'Error', false);
+  setStatus('Rol actualizado correctamente.', 'Éxito');
+  await refreshAdminView();
 }
 
 async function loadAdminOrders() {
@@ -1157,6 +1180,7 @@ elements.btnResetEarnings.addEventListener('click', () => {
 });
 elements.btnAdminFilter.addEventListener('click', loadAdminOrders);
 elements.btnAssignCommerce.addEventListener('click', assignCommerce);
+elements.btnUpdateRole.addEventListener('click', updateUserRole);
 elements.btnExportAliado.addEventListener('click', exportAliadoOrders);
 elements.btnExportAdmin.addEventListener('click', exportAdminOrders);
 if (elements.photoCaptureInput) {
