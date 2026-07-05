@@ -957,6 +957,17 @@ async function assignCommerce() {
   await loadAliadosForAdmin();
 }
 
+async function unassignCommerce() {
+  const motoristaId = elements.adminMotoristaSelect.value;
+  if (!motoristaId) return setStatus('Selecciona el motorizado a desasignar.', 'Error', false);
+
+  const { error } = await supabase.from('profiles').update({ assigned_commerce: null, assigned_commerce_id: null }).eq('id', motoristaId);
+  if (error) return setStatus('No fue posible quitar la asignación.', 'Error', false);
+  setStatus('Asignación de comercio eliminada del motorizado.', 'Éxito');
+  await loadMotoristasForAdmin();
+  await loadAliadosForAdmin();
+}
+
 function checkPendingOrderAlerts(orders) {
   const thresholdMs = 5 * 60 * 1000;
   orders.forEach(order => {
@@ -1207,6 +1218,9 @@ elements.btnResetEarnings.addEventListener('click', () => {
 });
 elements.btnAdminFilter.addEventListener('click', loadAdminOrders);
 elements.btnAssignCommerce.addEventListener('click', assignCommerce);
+if (elements.btnUnassignCommerce) {
+  elements.btnUnassignCommerce.addEventListener('click', unassignCommerce);
+}
 elements.btnUpdateRole.addEventListener('click', updateUserRole);
 elements.btnExportAliado.addEventListener('click', exportAliadoOrders);
 elements.btnExportAdmin.addEventListener('click', exportAdminOrders);

@@ -191,7 +191,10 @@
           <h3>Asignar motorizado a comercio</h3>
           <div class="field"><label for="admin-motorista-select">Motorizado</label><select id="admin-motorista-select"><option value="">No hay motorizados registrados</option></select></div>
           <div class="field"><label for="admin-commerce-select">Nombre del local</label><select id="admin-commerce-select"><option value="">Selecciona un aliado</option></select></div>
-          <button id="btn-assign-commerce" class="btn primary">Asignar comercio</button>
+          <div class="button-row" style="display:flex; gap:10px; flex-wrap:wrap;">
+            <button id="btn-assign-commerce" class="btn primary">Asignar comercio</button>
+            <button id="btn-unassign-commerce" class="btn secondary">Quitar asignación</button>
+          </div>
         </div>
         <div class="card small-card">
           <div class="section-header"><h3>Historial de pedidos</h3><button id="btn-export-admin" class="btn secondary small">Exportar pedidos .xls</button></div>
