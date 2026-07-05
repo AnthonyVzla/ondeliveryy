@@ -610,13 +610,14 @@ function renderActiveMotorists(motoristas) {
 }
 
 function renderMotoristStatus(motoristas, busyMotoristIds) {
-  const onCount = (motoristas || []).filter(user => !user.active_order).length;
-  const withOrdersCount = (motoristas || []).filter(user => busyMotoristIds?.has(user.id)).length;
-  const totalCount = (motoristas || []).length;
+  const normalizedMotoristas = (motoristas || []).filter(Boolean);
+  const onCount = normalizedMotoristas.filter(user => !Boolean(user.active_order)).length;
+  const withOrdersCount = normalizedMotoristas.filter(user => busyMotoristIds?.has(user.id)).length;
+  const totalCount = normalizedMotoristas.length;
   if (!elements.adminMotoristStatus) return;
   elements.adminMotoristStatus.innerHTML = `
-    <div class="metric-item"><span>ON</span><strong>${onCount}</strong></div>
-    <div class="metric-item"><span>Con pedidos</span><strong>${withOrdersCount}</strong></div>
+    <div class="metric-item"><span>Motorizados ON</span><strong>${onCount}</strong></div>
+    <div class="metric-item"><span>Ocupados</span><strong>${withOrdersCount}</strong></div>
     <div class="metric-item"><span>Total</span><strong>${totalCount}</strong></div>
   `;
 }
