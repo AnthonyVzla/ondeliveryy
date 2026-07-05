@@ -570,7 +570,7 @@ async function loadAdminMetrics() {
 
 async function loadMotoristasForAdmin() {
   const [profilesResult, ordersResult] = await Promise.all([
-    supabase.from('profiles').select('id,full_name,email,role,assigned_commerce,assigned_commerce_id,active_order'),
+    supabase.rpc('get_profiles_for_admin'),
     supabase.from('orders').select('assigned_to_id,status').in('status', ['assigned', 'on_way'])
   ]);
   if (profilesResult.error) {
@@ -581,7 +581,8 @@ async function loadMotoristasForAdmin() {
   }
   if (ordersResult.error) return console.error(ordersResult.error);
 
-  const motoristas = (profilesResult.data || []).filter(user => {
+  const profiles = Array.isArray(profilesResult.data) ? profilesResult.data : [];
+  const motoristas = profiles.filter(user => {
     const role = normalizeRole(user.role);
     return role === 'motorizado'
       || (!role && (user.assigned_commerce || user.assigned_commerce_id || user.active_order || user.email));
@@ -621,9 +622,9 @@ function renderMotoristStatus(motoristas, busyMotoristIds) {
 }
 
 async function loadAliadosForAdmin() {
-  const { data, error } = await supabase.from('profiles').select('id,business_name,email,role');
+  const { data, error } = await supabase.rpc('get_profiles_for_admin');
   if (error) return console.error(error);
-  const aliados = (data || []).filter(user => user.role === 'aliado');
+  const aliados = (Array.isArray(data) ? data : []).filter(user => normalizeRole(user.role) === 'aliado');
   elements.adminCommerceSelect.innerHTML = aliados.length
     ? aliados.map(user => {
         const label = user.business_name || user.email || 'Aliado sin nombre';
@@ -634,10 +635,11 @@ async function loadAliadosForAdmin() {
 }
 
 async function loadAdminUsers() {
-  const { data, error } = await supabase.from('profiles').select('id,full_name,email,role');
+  const { data, error } = await supabase.rpc('get_profiles_for_admin');
   if (error) return console.error(error);
-  elements.adminUserSelect.innerHTML = (data || []).length
-    ? (data || []).map(user => `<option value="${user.id}">${user.full_name || user.email} (${user.role || 'sin rol'})</option>`).join('')
+  const users = Array.isArray(data) ? data : [];
+  elements.adminUserSelect.innerHTML = users.length
+    ? users.map(user => `<option value="${user.id}">${user.full_name || user.email} (${normalizeRole(user.role) || 'sin rol'})</option>`).join('')
     : '<option value="">No hay usuarios registrados</option>';
 }
 
