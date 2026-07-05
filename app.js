@@ -304,10 +304,23 @@ async function routeByRole() {
 }
 
 function updateMotorStatus() {
-  const hasActive = !!currentProfile?.active_order;
-  motorOn = !hasActive;
+  const isOnline = currentProfile?.is_online ?? !currentProfile?.active_order;
+  motorOn = Boolean(isOnline);
   elements.motorStatusText.textContent = motorOn ? 'ON' : 'OFF';
   elements.btnToggleStatus.textContent = motorOn ? 'Desactivar' : 'Activar';
+}
+
+async function setMotoristOnlineStatus(isOnline) {
+  if (!currentProfile || !currentUser) return;
+  const { error } = await supabase.from('profiles').update({ is_online: isOnline }).eq('id', currentUser.id);
+  if (error) {
+    console.error('Error actualizando estado on/off', error);
+    return setStatus('No se pudo actualizar el estado del motorizado.', 'Error', false);
+  }
+  currentProfile.is_online = isOnline;
+  updateMotorStatus();
+  await loadMotoristasForAdmin();
+  setStatus(isOnline ? 'Estado ON activado.' : 'Estado OFF activado.', 'Éxito');
 }
 
 function normalizeRole(role) {
@@ -582,18 +595,15 @@ async function loadMotoristasForAdmin() {
   if (ordersResult.error) return console.error(ordersResult.error);
 
   const profiles = Array.isArray(profilesResult.data) ? profilesResult.data : [];
-  const motoristas = profiles.filter(user => {
-    const role = normalizeRole(user.role);
-    return role === 'motorizado'
-      || (!role && (user.assigned_commerce || user.assigned_commerce_id || user.active_order || user.email));
-  });
+  const motoristas = profiles.filter(user => normalizeRole(user.role) === 'motorizado');
 
   const busyMotoristIds = new Set((ordersResult.data || []).filter(order => order.assigned_to_id).map(order => order.assigned_to_id));
   elements.adminMotoristaSelect.innerHTML = motoristas.length
     ? motoristas.map(user => {
-        const commerceLabel = user.assigned_commerce || (user.assigned_commerce_id ? 'Comercio asignado' : 'Sin comercio');
-        const roleLabel = normalizeRole(user.role) === 'motorizado' ? 'Motorizado' : 'Sin rol o sin coincidencia';
-        return `<option value="${user.id}">${user.full_name || user.email} (${roleLabel})${commerceLabel ? ' — ' + commerceLabel : ''}</option>`;
+        const commerceLabel = user.assigned_commerce || 'Sin comercio';
+        const roleLabel = 'Motorizado';
+        const onlineLabel = user.is_online ? 'ON' : 'OFF';
+        return `<option value="${user.id}">${user.full_name || user.email} (${roleLabel}, ${onlineLabel}) — ${commerceLabel}</option>`;
       }).join('')
     : '<option value="">No hay motorizados registrados</option>';
   elements.adminMotoristaSelect.disabled = !motoristas.length;
@@ -602,16 +612,16 @@ async function loadMotoristasForAdmin() {
 }
 
 function renderActiveMotorists(motoristas) {
-  const activeMotoristas = (motoristas || []).filter(user => user.active_order);
+  const onlineMotoristas = (motoristas || []).filter(user => user.is_online);
   if (!elements.adminActiveMotorists) return;
-  elements.adminActiveMotorists.innerHTML = activeMotoristas.length
-    ? activeMotoristas.map(user => `<div class="metric-item"><span>${user.full_name || user.email}</span><strong>Con pedido</strong></div>`).join('')
-    : '<p class="note">No hay motorizados con pedidos activos.</p>';
+  elements.adminActiveMotorists.innerHTML = onlineMotoristas.length
+    ? onlineMotoristas.map(user => `<div class="metric-item"><span>${user.full_name || user.email}</span><strong>ON</strong></div>`).join('')
+    : '<p class="note">No hay motorizados ON en este momento.</p>';
 }
 
 function renderMotoristStatus(motoristas, busyMotoristIds) {
   const normalizedMotoristas = (motoristas || []).filter(Boolean);
-  const onCount = normalizedMotoristas.filter(user => !Boolean(user.active_order)).length;
+  const onCount = normalizedMotoristas.filter(user => Boolean(user.is_online)).length;
   const withOrdersCount = normalizedMotoristas.filter(user => busyMotoristIds?.has(user.id)).length;
   const totalCount = normalizedMotoristas.length;
   if (!elements.adminMotoristStatus) return;
@@ -1174,9 +1184,8 @@ elements.deliveryForm.addEventListener('submit', createOrder);
 [elements.aliadoPendingList, elements.aliadoOnwayList, elements.aliadoDeliveredList, elements.availableOrdersList, elements.motorPendingList, elements.motorDeliveredList, elements.motorCanceledList, elements.motorHistoryList, elements.adminOrdersList].forEach(container => {
   container.addEventListener('click', handleOrderAction);
 });
-elements.btnToggleStatus.addEventListener('click', () => {
-  motorOn = !motorOn;
-  elements.motorStatusText.textContent = motorOn ? 'ON' : 'OFF';
+elements.btnToggleStatus.addEventListener('click', async () => {
+  await setMotoristOnlineStatus(!motorOn);
 });
 elements.btnEnableNotifications.addEventListener('click', requestNotificationPermission);
 ['pointerdown','touchstart','keydown','click'].forEach(eventName => {
