@@ -310,6 +310,10 @@ function updateMotorStatus() {
   elements.btnToggleStatus.textContent = motorOn ? 'Desactivar' : 'Activar';
 }
 
+function normalizeRole(role) {
+  return String(role || '').trim().toLowerCase();
+}
+
 async function refreshAliadoView() {
   await loadAliadoOrders();
 }
@@ -569,14 +573,25 @@ async function loadMotoristasForAdmin() {
     supabase.from('profiles').select('id,full_name,email,role,assigned_commerce,assigned_commerce_id,active_order'),
     supabase.from('orders').select('assigned_to_id,status').in('status', ['assigned', 'on_way'])
   ]);
-  if (profilesResult.error) return console.error(profilesResult.error);
+  if (profilesResult.error) {
+    console.error(profilesResult.error);
+    elements.adminMotoristaSelect.innerHTML = '<option value="">No se pudieron cargar los motorizados</option>';
+    elements.adminMotoristaSelect.disabled = true;
+    return;
+  }
   if (ordersResult.error) return console.error(ordersResult.error);
-  const motoristas = (profilesResult.data || []).filter(user => user.role === 'motorizado' || !user.role);
+
+  const motoristas = (profilesResult.data || []).filter(user => {
+    const role = normalizeRole(user.role);
+    return role === 'motorizado'
+      || (!role && (user.assigned_commerce || user.assigned_commerce_id || user.active_order || user.email));
+  });
+
   const busyMotoristIds = new Set((ordersResult.data || []).filter(order => order.assigned_to_id).map(order => order.assigned_to_id));
   elements.adminMotoristaSelect.innerHTML = motoristas.length
     ? motoristas.map(user => {
         const commerceLabel = user.assigned_commerce || (user.assigned_commerce_id ? 'Comercio asignado' : 'Sin comercio');
-        const roleLabel = user.role === 'motorizado' ? 'Motorizado' : 'Sin rol';
+        const roleLabel = normalizeRole(user.role) === 'motorizado' ? 'Motorizado' : 'Sin rol o sin coincidencia';
         return `<option value="${user.id}">${user.full_name || user.email} (${roleLabel})${commerceLabel ? ' — ' + commerceLabel : ''}</option>`;
       }).join('')
     : '<option value="">No hay motorizados registrados</option>';
