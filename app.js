@@ -256,18 +256,40 @@ async function checkSession() {
 
 async function loadProfile() {
   setStatus('', '');
+  let profileError = null;
   const { data, error } = await supabase.from('profiles').select('*').eq('id', currentUser.id).maybeSingle();
   if (error) {
+    profileError = error;
     console.error('Perfil error', error);
   }
-  if (!data) {
-    await supabase.from('profiles').insert({ id: currentUser.id, email: currentUser.email, full_name: '', role: null });
-    currentProfile = { id: currentUser.id, email: currentUser.email, role: null };
-  } else {
-    currentProfile = data;
+
+  if (!data && !profileError) {
+    const { error: insertError } = await supabase.from('profiles').insert({
+      id: currentUser.id,
+      email: currentUser.email,
+      full_name: '',
+      role: null
+    });
+
+    if (insertError) {
+      profileError = insertError;
+      console.error('No se pudo crear el perfil', insertError);
+    }
   }
+
+  currentProfile = data || {
+    id: currentUser.id,
+    email: currentUser.email,
+    full_name: '',
+    role: null,
+  };
+
+  if (profileError) {
+    setStatus('No se pudo cargar tu perfil. Revisa las políticas de Supabase y vuelve a intentarlo.', 'Error', false);
+  }
+
   updateLogoutButton();
-  routeByRole();
+  await routeByRole();
 }
 
 async function routeByRole() {
